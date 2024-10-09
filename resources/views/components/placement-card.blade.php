@@ -14,15 +14,18 @@
             <div>{{ $placement->location }}</div>
         </div>
         <div class="flex space-x-1 text-xs">
-            <x-tag>{{ Str::ucfirst($placement->experience) }}</x-tag>
-            <x-tag>{{ $placement->category }}</x-tag>
+            <x-tag>
+                <a href="{{ route('placements.index', ['experience' => $placement->experience]) }}">
+                    {{ Str::ucfirst($placement->experience) }}
+                </a>
+            </x-tag>
+            <x-tag>
+                <a href="{{ route('placements.index', ['category' => $placement->category]) }}">
+                    {{ $placement->category }}
+                </a>
+            </x-tag>
         </div>
-    </div>
-
-    <p class="text-sm text-slate-500 mb-4">
-        {!! nl2br(e($placement->description)) !!}
-        <!--syntax to show html elements on blade-->
-    </p>
+    </div>    
     
     {{ $slot }}
 </x-card> 
