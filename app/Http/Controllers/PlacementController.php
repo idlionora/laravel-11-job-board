@@ -12,9 +12,10 @@ class PlacementController extends Controller
      */
     public function index()
     {   
-        $filters = request()->only('search', 'min-salary', 'max-salary', 'experience', 'category');        
+        $filters = request()->only('search', 'min_salary', 'max_salary', 'experience', 'category');        
 
-        return view('placement.index', ['placements' => Placement::filter($filters)->get()]);
+        return view('placement.index', 
+        ['placements' => Placement::with('employer')->filter($filters)->get()]);
     }
 
     /**
@@ -38,7 +39,9 @@ class PlacementController extends Controller
      */
     public function show(Placement $placement)
     {
-        return view('placement.show', compact('placement'));
+        return view('placement.show', 
+        ['placement' => $placement->load('employer.placements')]);
+        // load all placements by the employer as well
     }
 
     /**
