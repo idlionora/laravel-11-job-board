@@ -6,6 +6,16 @@
             {!! nl2br(e($placement->description)) !!}
             <!--syntax to show html elements on blade-->
         </p>
+
+        @can('apply', $placement)
+            <x-link-button :href="route('placement.application.create', $placement)">
+                Apply
+            </x-link-button>
+            @else
+            <div class="text-center text-sm font-medium text-slate-500">
+                You already applied to this job
+            </div>
+        @endcan
     </x-placement-card>
 
     <x-card class="mb-4">

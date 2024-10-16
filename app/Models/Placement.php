@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
 class Placement extends Model
@@ -19,6 +21,20 @@ class Placement extends Model
     public function employer(): BelongsTo
     {
         return $this->belongsTo(Employer::class);
+    }
+
+    public function jobApplications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class);
+    }
+
+    public function hasUserApplied(Authenticatable|User|int $user) {
+        return $this->where('id', $this->id)
+        ->whereHas(
+            'jobApplications',
+            fn($query) => $query->where('user_id', '=', $user->id ?? $user)
+        )->exists(); 
+        // exists() returns boolean values       
     }
 
     public function scopeFilter(Builder|QueryBuilder $query, array $filters): Builder|QueryBuilder
