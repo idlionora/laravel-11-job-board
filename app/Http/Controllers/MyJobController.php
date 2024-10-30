@@ -5,17 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Placement;
 use Illuminate\Http\Request;
 
-class PlacementController extends Controller
+class MyJobController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
-    {   
-        $filters = request()->only('search', 'min_salary', 'max_salary', 'experience', 'category');        
-
-        return view('placement.index', 
-        ['placements' => Placement::with('employer')->latest()->filter($filters)->get()]);
+    {
+        return view('my_job.index');
     }
 
     /**
@@ -23,7 +20,7 @@ class PlacementController extends Controller
      */
     public function create()
     {
-        //
+        return view('my_job.create');
     }
 
     /**
@@ -31,17 +28,28 @@ class PlacementController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validatedData = $request->validate([
+            'title' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
+            'salary' => 'required|numeric|min:5000',
+            'description' => 'required|string',
+            'experience' => 'required|in:' . implode(',', Placement::$experience),
+            'category' => 'required|in:' . implode(',', Placement::$category)
+        ]);
+
+        $request->user()->employer->placements()->create($validatedData);
+        // we call this create() on employer model. it would be auto associated with the model
+
+        return redirect()->route('my-jobs.index')
+            ->with('success', 'Job created successfully.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Placement $placement)
+    public function show(string $id)
     {
-        return view('placement.show', 
-        ['placement' => $placement->load('employer.placements')]);
-        // load all placements by the employer as well
+        //
     }
 
     /**
