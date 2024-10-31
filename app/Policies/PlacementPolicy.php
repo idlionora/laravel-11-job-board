@@ -16,6 +16,11 @@ class PlacementPolicy
         return true;
     }
 
+    public function viewAnyEmployer(User $user): bool
+    {
+        return true;
+    }
+
     /**
      * Determine whether the user can view the model.
      */
@@ -29,15 +34,23 @@ class PlacementPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->employer !== null;
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Placement $placement): bool
+    public function update(User $user, Placement $placement): bool|Response
     {
-        return false;
+        if ($placement->employer->user_id !== $user->id) {
+            return false;
+        }
+
+        if ($placement->jobApplications()->count() > 0) {
+            return Response::deny('Cannot change this job with applications');
+        }
+
+        return true;
     }
 
     /**
@@ -45,7 +58,7 @@ class PlacementPolicy
      */
     public function delete(User $user, Placement $placement): bool
     {
-        return false;
+        return $placement->employer->user_id === $user->id;
     }
 
     /**
@@ -53,7 +66,7 @@ class PlacementPolicy
      */
     public function restore(User $user, Placement $placement): bool
     {
-        return false;
+        return $placement->employer->user_id === $user->id;
     }
 
     /**
@@ -61,7 +74,7 @@ class PlacementPolicy
      */
     public function forceDelete(User $user, Placement $placement): bool
     {
-        return false;
+        return $placement->employer->user_id === $user->id;
     }
 
     public function apply(User $user, Placement $placement): bool {
