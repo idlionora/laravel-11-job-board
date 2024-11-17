@@ -20,6 +20,7 @@ class MyJobController extends Controller
             'placements' => $request->user()->employer
                 ->placements()
                 ->with(['employer', 'jobApplications', 'jobApplications.user'])
+                ->withTrashed()
                 ->get()
         ]);
     }
@@ -80,8 +81,12 @@ class MyJobController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Placement $myJob)
     {
-        //
+        $myJob->delete();
+        // without implementing soft delete, this will permanently delete the job
+
+        return redirect()->route('my-jobs.index')
+        ->with('success', 'Job deleted.');
     }
 }
