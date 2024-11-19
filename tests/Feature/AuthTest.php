@@ -5,10 +5,8 @@ namespace Tests\Feature;
 use App\Models\Employer;
 use App\Models\Placement;
 use App\Models\User;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -65,11 +63,15 @@ class AuthTest extends TestCase
             'email' => $employerUserEmail
         ]);
         $employer = Employer::factory()->create([
-            'company_name' => $employerUserCompany
+            'company_name' => $employerUserCompany,
+            'user_id' => $employerUser->id
         ]);
         Placement::factory($placementsNum)->create([
             'employer_id' => $employer->id
         ]);
+        $this->employerUserName = $employerUserName;
+        $this->employerUserEmail = $employerUserEmail;
+        $this->employerUser = $employerUser;
     }
 
     public function test_login_page_returns_200(): void
@@ -101,7 +103,7 @@ class AuthTest extends TestCase
         $response->assertSessionHas('error', 'Invalid credentials');
     }
 
-    public function test_login_redirect_to_homepage(): void
+    public function test_login_redirects_to_homepage(): void
     {
         $response = $this->post('/auth', [
             'email' => $this->jobSeekerEmail,
@@ -120,5 +122,54 @@ class AuthTest extends TestCase
         
         $this->assertGuest();
         $response->assertRedirect('/');
+    }
+
+    public function test_guest_cannot_see_myjobs_link_in_placements_index(): void
+    {
+        $response = $this->get('/placements');
+
+        $response->assertStatus(200);
+        $this->assertGuest();
+        $response->assertDontSee('My Jobs');
+    }
+
+    public function test_loggedin_user_can_see_myjobs_link_in_placements_index(): void
+    {
+        $this->be($this->toBeEmployerUser);
+
+        $response = $this->actingAs($this->toBeEmployerUser)->get('/placements');
+
+        $response->assertStatus(200);
+        $response->assertSee('My Jobs');
+    }
+
+    public function test_guest_accessing_myjobs_is_redirected_to_login_page(): void
+    {
+        $response = $this->get('/my-jobs');
+
+        $response->assertStatus(302);
+        $response->assertRedirect('/login'); 
+        // automatically redirected by eloquent Auth
+    }
+
+    public function test_nonemployer_user_accessing_myjobs_is_redirected_to_employer_create(): void
+    {
+        $this->be($this->toBeEmployerUser);
+
+        $response = $this->actingAs($this->toBeEmployerUser)->from('/placements')->get('/my-jobs');
+
+        $response->assertStatus(302);
+        $response->assertRedirect('/employer/create'); 
+        $response->assertSessionHas('error');
+    }
+
+    public function test_employer_user_can_access_myjobs(): void
+    {
+        $this->be($this->employerUser);
+
+        $response = $this->actingAs($this->employerUser)->from('/placements')->get('/my-jobs');
+
+        $response->assertStatus(200);
+        $response->assertSee('Add New');
     }
 }

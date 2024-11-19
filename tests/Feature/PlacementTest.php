@@ -6,7 +6,7 @@ use App\Models\Employer;
 use App\Models\User;
 use App\Models\Placement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
+// use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class PlacementTest extends TestCase
@@ -28,6 +28,7 @@ class PlacementTest extends TestCase
 
     private string $employerUser2Name;
     private string $employerUser2Email;
+    private string $employerUser2Company;
     private int $placements2Num;
     private string $placement2Title;
     private string $placement2Desc;
@@ -43,6 +44,7 @@ class PlacementTest extends TestCase
         $placements1Num = 5;
         $employerUser2Name = 'Test Employer 2';
         $employerUser2Email = 'test.employer02@mailsac.com';
+        $employerUser2Company = 'Test Company 2';
         $placements2Num = 10; // including Placements with custom title and desc
         $placement2Title = 'Test Placement Title';
         $placement2Desc = 'Insert test description here.';
@@ -79,6 +81,7 @@ class PlacementTest extends TestCase
             'email' => $employerUser2Email
         ]);
         $employer2 = Employer::factory()->create([
+            'company_name' => $employerUser2Company,
             'user_id' => $employerUser2->id,
         ]);
         Placement::factory()->create([
@@ -95,9 +98,10 @@ class PlacementTest extends TestCase
         $this->employerUser2Name = $employerUser2Name;
         $this->employerUser2Email = $employerUser2Email;
         $this->employerUser2 = $employerUser2;
+        $this->employerUser2Company = $employerUser2Company;
         $this->placements2Num = $placements2Num;
-        $this->$placement2Title = $placement2Title;
-        $this->$placement2Desc = $placement2Desc;        
+        $this->placement2Title = $placement2Title;
+        $this->placement2Desc = $placement2Desc;        
     }
 
     public function test_homepage_redirects_to_placement_index(): void
@@ -119,26 +123,59 @@ class PlacementTest extends TestCase
     public function test_placement_index_contains_non_empty_table(): void
     {
         $placement = Placement::with('employer')->latest()->first();
-
+        
         $response = $this->get('/placements');
-
+        
         $response->assertStatus(200);
         $response->assertViewHas('placements', function ($collection) use ($placement) {
             return $collection->contains($placement);
         });
     }
 
-    // Testing Filter //
+    // TESTING FILTER //
 
-    // public function test_placement_index_can_filter_by_placement_title(): void 
-    // {
+    public function test_placement_index_can_filter_by_placement_title(): void 
+    {
+        $placement= Placement::with('employer')->latest()->where('title', '=', $this->placement2Title)->first();
 
-    // }
+        $response = $this->get("/placements?search=" . str_replace(' ', '+', $this->placement2Title));
 
-    // public function test_placement_index_can_filter_by_placement_description(): void 
-    // {
+        $response->assertStatus(200);
+        $this->assertEquals(1, $response->original->getData()['placements']->count());
+        $response->assertViewHas('placements', function ($collection) use ($placement) {
+            return $collection->contains($placement);
+        });
+    }
 
-    // }
+    public function test_placement_index_can_filter_by_placement_description(): void 
+    {
+        $placement = Placement::with('employer')->latest()->where('description', '=', $this->placement2Desc)->first();
+
+        $response = $this->get("/placements?search=" . str_replace(' ', '+', $this->placement2Desc));
+
+        $response->assertStatus(200);
+        $this->assertEquals(1, $response->getOriginalContent()->getData()['placements']->count());
+        $response->assertViewHas('placements', function ($collection) use ($placement) {
+            return $collection->contains($placement);
+        });
+    }
+
+    public function test_placement_index_can_filter_by_employer(): void 
+    {
+        $placements = Placement::with('employer')->whereHas('employer', function ($query) {
+            $query->where('company_name', '=', $this->employerUser1Company);
+        })->get();
+
+        $response = $this->get("/placements?search=" . str_replace(' ', '+', $this->employerUser1Company));
+
+        $response->assertStatus(200);
+        $this->assertEquals($placements->count(), $response->getOriginalContent()->getData()['placements']->count());
+        $response->assertViewHas('placements', function ($collection) {
+            return $collection->doesntContain(function ($placement) {
+                return $placement->employer->company_name === $this->employerUser2Company;
+            });
+        });
+    }
 
     // public function test_placement_index_can_filter_by_placement_salary(): void 
     // {
@@ -150,13 +187,20 @@ class PlacementTest extends TestCase
 
     // }
 
-    // public function test_placement_index_can_filter_by_placement_category(): void 
-    // {
+    public function test_placement_index_can_filter_by_placement_category(): void 
+    {
+        $category = Placement::$category[array_rand(Placement::$category)];
+        $placements = Placement::where('category', '=', $category)->get();
 
-    // }
+        $response = $this->get("/placements?category=" . str_replace(' ', '+', $category));
 
-    // public function test_placement_index_can_filter_by_employer(): void 
-    // {
+        $response->assertStatus(200);
+        $this->assertEquals($placements->count(), $response->getOriginalContent()->getData()['placements']->count());
 
-    // }
+        $response->assertViewHas('placements', function ($collection) use ($category) {
+            return $collection->every(function ($placement) use ($category) {
+                return $placement->category === $category;
+            });
+        });
+    }
 }
